@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ USER ============
+model User {
+  id            String   @id @default(uuid())
+  walletAddress String   @unique
+  totalPoints   Int      @default(0)
+  gamesPlayed   Int      @default(0)
+  highScore     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  gameSessions   GameSession[]
+  ownedSkins     OwnedSkin[]
+  skinLoadout    SkinLoadout?
+  rewards        Reward[]
+  dailyScores    DailyScore[]
+  weeklyScores   WeeklyScore[]
+
+  @@index([totalPoints])
+  @@index([highScore])
+}
+
+// ============ GAME SESSION ============
+model GameSession {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  walletAddress   String
+  startTime       DateTime @default(now())
+  endTime         DateTime?
+  finalScore      Int?
+  isValid         Boolean  @default(true)
+  invalidReason   String?
+  paymentTxSig    String   // Transaction signature for 50 token payment
+  replayData      Bytes?   // Compressed replay data for verification
+  inputsHash      String?  // Hash of all inputs for integrity check
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([walletAddress])
+  @@index([startTime])
+  @@index([finalScore])
+}
+
+// ============ LEADERBOARD SCORES ============
+// Daily scores (reset at midnight UTC)
+model DailyScore {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  walletAddress String
+  score         Int
+  date          DateTime @db.Date // Just the date, no time
+  gameSessionId String?
+
+  createdAt     DateTime @default(now())
+
+  @@unique([walletAddress, date])
+  @@index([date, score(sort: Desc)])
+  @@index([userId])
+}
+
+// Weekly scores (reset Sunday midnight UTC)
+model WeeklyScore {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  walletAddress String
+  score         Int
+  weekStart     DateTime @db.Date // Monday of the week
+  gameSessionId String?
+
+  createdAt     DateTime @default(now())
+
+  @@unique([walletAddress, weekStart])
+  @@index([weekStart, score(sort: Desc)])
+  @@index([userId])
+}
+
+// ============ PACKS & SKINS ============
+model Pack {
+  id             String   @id @default(uuid())
+  name           String
+  description    String
+  imageUrl       String
+  price          Int      @default(100000) // 100,000 fruit tokens
+  isActive       Boolean  @default(true)
+  isSoldOut      Boolean  @default(false)
+  totalSkins     Int      @default(0)
+  remainingSkins Int      @default(0)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  skins          Skin[]
+
+  @@index([isActive])
+  @@index([isSoldOut])
+}
+
+model Skin {
+  id           String      @id @default(uuid())
+  packId       String
+  pack         Pack        @relation(fields: [packId], references: [id])
+  name         String
+  fruitType    String      // cherry, strawberry, etc.
+  rarity       String      // common, uncommon, rare, epic, legendary
+  imageUrl     String
+  totalSupply  Int
+  mintedCount  Int         @default(0)
+  isSoldOut    Boolean     @default(false)
+
+  // Metaplex metadata
+  metadataUri  String?     // URI to off-chain metadata
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  ownedSkins   OwnedSkin[]
+
+  @@index([packId])
+  @@index([fruitType])
+  @@index([rarity])
+  @@index([isSoldOut])
+}
+
+model OwnedSkin {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  skinId        String
+  skin          Skin     @relation(fields: [skinId], references: [id])
+  walletAddress String
+  mintAddress   String   @unique // Solana NFT mint address
+  mintTxSig     String   // Minting transaction signature
+
+  acquiredAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([walletAddress])
+  @@index([skinId])
+}
+
+// Track which skins user has equipped
+model SkinLoadout {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id])
+  walletAddress String   @unique
+
+  // Store equipped skin IDs for each fruit type (null = default)
+  cherrySkinId      String?
+  strawberrySkinId  String?
+  grapeSkinId       String?
+  persimmonSkinId   String?
+  appleSkinId       String?
+  pearSkinId        String?
+  peachSkinId       String?
+  pineappleSkinId   String?
+  melonSkinId       String?
+  watermelonSkinId  String?
+
+  updatedAt     DateTime @updatedAt
+}
+
+// ============ REWARDS ============
+model Reward {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  walletAddress String
+  type          String    // 'pack' or 'tokens'
+  amount        Int?      // For token rewards
+  packId        String?   // For pack rewards
+  reason        String    // e.g., "Weekly Leaderboard #1"
+  weekStart     DateTime? @db.Date
+
+  claimedAt     DateTime?
+  claimTxSig    String?   // Transaction signature when claimed
+  expiresAt     DateTime?
+
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+  @@index([walletAddress])
+  @@index([claimedAt])
+  @@index([type])
+}
+
+// ============ TRANSACTION LOG ============
+// Track all token transactions for auditing
+model TransactionLog {
+  id            String   @id @default(uuid())
+  walletAddress String
+  type          String   // 'play', 'gacha', 'reward_claim'
+  amount        Int
+  txSignature   String   @unique
+  status        String   // 'pending', 'confirmed', 'failed'
+
+  createdAt     DateTime @default(now())
+  confirmedAt   DateTime?
+
+  @@index([walletAddress])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============ NONCE FOR REPLAY ATTACK PREVENTION ============
+model UsedNonce {
+  id        String   @id @default(uuid())
+  nonce     String   @unique
+  usedAt    DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
