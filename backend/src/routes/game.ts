@@ -32,31 +32,42 @@ router.post('/start', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
-    // Verify payment transaction
-    const isValidTx = await verifyTransaction(transactionSignature, walletAddress, PLAY_COST);
-    if (!isValidTx) {
-      return res.status(400).json({ error: 'Invalid or unconfirmed payment transaction' });
-    }
-
-    // Check for duplicate transaction (replay attack prevention)
     const existingTx = await prisma.transactionLog.findUnique({
       where: { txSignature: transactionSignature }
     });
-    if (existingTx) {
-      return res.status(400).json({ error: 'Transaction already used' });
-    }
 
-    // Log the transaction
-    await prisma.transactionLog.create({
-      data: {
-        walletAddress,
-        type: 'play',
-        amount: PLAY_COST,
-        txSignature: transactionSignature,
-        status: 'confirmed',
-        confirmedAt: new Date(),
+    if (existingTx) {
+      if (existingTx.walletAddress !== walletAddress) {
+        return res.status(400).json({ error: 'Transaction wallet mismatch' });
       }
-    });
+      if (existingTx.status !== 'confirmed') {
+        return res.status(400).json({ error: 'Transaction not confirmed' });
+      }
+      const usedSession = await prisma.gameSession.findFirst({
+        where: { paymentTxSig: transactionSignature }
+      });
+      if (usedSession) {
+        return res.status(400).json({ error: 'Transaction already used' });
+      }
+    } else {
+      // Verify payment transaction
+      const isValidTx = await verifyTransaction(transactionSignature, walletAddress, PLAY_COST);
+      if (!isValidTx) {
+        return res.status(400).json({ error: 'Invalid or unconfirmed payment transaction' });
+      }
+
+      // Log the transaction
+      await prisma.transactionLog.create({
+        data: {
+          walletAddress,
+          type: 'play',
+          amount: PLAY_COST,
+          txSignature: transactionSignature,
+          status: 'confirmed',
+          confirmedAt: new Date(),
+        }
+      });
+    }
 
     // Get or create user
     let user = await prisma.user.findUnique({
@@ -114,6 +125,82 @@ router.post('/start', async (req: Request, res: Response) => {
 });
 
 /**
+ * Verify payment before starting a session
+ * POST /api/game/verify-payment
+ */
+router.post('/verify-payment', async (req: Request, res: Response) => {
+  try {
+    const { walletAddress, signature, message, transactionSignature } = req.body;
+
+    if (!walletAddress || !signature || !message || !transactionSignature) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Verify wallet signature
+    const isValidSignature = await verifySignature(walletAddress, message, signature);
+    if (!isValidSignature) {
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
+
+    const existingTx = await prisma.transactionLog.findUnique({
+      where: { txSignature: transactionSignature }
+    });
+
+    if (existingTx) {
+      if (existingTx.walletAddress !== walletAddress) {
+        return res.status(400).json({ error: 'Transaction wallet mismatch' });
+      }
+      if (existingTx.status !== 'confirmed') {
+        return res.status(400).json({ error: 'Transaction not confirmed' });
+      }
+      const usedSession = await prisma.gameSession.findFirst({
+        where: { paymentTxSig: transactionSignature }
+      });
+      if (usedSession) {
+        return res.status(400).json({ error: 'Transaction already used' });
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          readyToStart: true,
+          transactionSignature,
+          alreadyVerified: true,
+        }
+      });
+    }
+
+    const isValidTx = await verifyTransaction(transactionSignature, walletAddress, PLAY_COST);
+    if (!isValidTx) {
+      return res.status(400).json({ error: 'Invalid or unconfirmed payment transaction' });
+    }
+
+    await prisma.transactionLog.create({
+      data: {
+        walletAddress,
+        type: 'play',
+        amount: PLAY_COST,
+        txSignature: transactionSignature,
+        status: 'confirmed',
+        confirmedAt: new Date(),
+      }
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        readyToStart: true,
+        transactionSignature,
+        alreadyVerified: false,
+      }
+    });
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    return res.status(500).json({ error: 'Failed to verify payment' });
+  }
+});
+
+/**
  * Submit a game input (drop fruit)
  * POST /api/game/input
  */
@@ -163,7 +250,7 @@ router.get('/state/:sessionId', async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
 
-    const gameEngine = activeSessions.get(sessionId);
+    const gameEngine = activeSessions.get(sessionId.toString());
     if (!gameEngine) {
       return res.status(404).json({ error: 'Game session not found or expired' });
     }
