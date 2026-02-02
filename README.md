@@ -2,6 +2,68 @@
 
 A Web3 Suika-style gacha game built on Solana. Drop fruits, merge them to evolve, collect NFT skins, and compete on leaderboards!
 
+## Project Overview
+
+**Fruit Game** is a blockchain-integrated puzzle game that combines the addictive gameplay of Suika Game (Watermelon Game) with Web3 mechanics. Players drop fruits into a container, merge matching fruits to create larger ones, and compete for high scores while collecting NFT skins through a gacha system.
+
+### Core Concept
+
+The game follows a simple but engaging mechanic: players drop fruits from the top of a container, and when two identical fruits collide, they merge into the next fruit in the evolution chain. The goal is to achieve the highest score within a 7-minute time limit by strategically placing fruits to create chain reactions and reach the ultimate fruit: the watermelon.
+
+### Architecture
+
+The project is built as a full-stack application with a clear separation of concerns:
+
+- **Frontend**: Next.js 14 application with React components, using Matter.js for client-side physics simulation and rendering. The frontend handles user interactions, wallet connections, and visual presentation.
+
+- **Backend**: Express.js API server that runs the authoritative game engine. All game logic, physics calculations, and state management happen server-side to prevent cheating. The backend also handles Solana blockchain interactions, database operations, and anti-cheat validation.
+
+- **Shared Types**: Common TypeScript definitions shared between frontend and backend to ensure type safety and consistency.
+
+- **Database**: PostgreSQL database managed with Prisma ORM, storing user profiles, game sessions, leaderboards, NFT skins, and transaction logs.
+
+### Key Systems
+
+1. **Game Engine**: Server-side physics engine that simulates fruit drops, collisions, and merges. The engine maintains authoritative game state and validates all player inputs.
+
+2. **Anti-Cheat System**: 
+   - All game logic runs server-side
+   - Complete replay storage for every game session
+   - Input validation and suspicious pattern detection
+   - Transaction verification before game start
+
+3. **Leaderboard System**: Three-tier ranking system (daily, weekly, all-time) with automatic resets and reward distribution for top players.
+
+4. **NFT Gacha System**: Players can purchase packs using in-game tokens to unlock unique fruit skins. Skins are minted as Solana NFTs using Metaplex, with five rarity tiers and limited supplies.
+
+5. **Solana Integration**: 
+   - Wallet connection (Phantom, Solflare, Coinbase, Ledger)
+   - Token payments for game entry and pack purchases
+   - NFT minting and ownership tracking
+   - Transaction verification and logging
+
+6. **Replay System**: Every game session is recorded and compressed for storage, enabling replay viewing and cheat detection through post-game analysis.
+
+### Game Flow
+
+1. **Connect Wallet**: Player connects their Solana wallet to the application
+2. **Pay to Play**: Player pays 50 FRUIT tokens to start a game session
+3. **Game Session**: 7-minute timed gameplay where player drops fruits strategically
+4. **Score Tracking**: Server validates all actions and tracks score in real-time
+5. **Game End**: Final score is recorded, leaderboards updated, and rewards calculated
+6. **Rewards**: Top weekly players receive free pack rewards
+
+### Web3 Features
+
+- **Token Economics**: Native FRUIT token used for game entry (50 tokens) and pack purchases (100,000 tokens)
+- **NFT Collectibles**: Unique fruit skins minted as Solana NFTs with varying rarities
+- **Ownership**: Players truly own their NFT skins and can trade them on secondary markets
+- **Rewards**: Weekly leaderboard winners receive pack rewards that can be claimed on-chain
+
+### Development Status
+
+The project includes a complete game engine, frontend interface, backend API, and database schema. Core gameplay mechanics are implemented, with Web3 integrations (Solana token payments and NFT minting) marked as TODO items for full blockchain functionality.
+
 ## Features
 
 - **Suika-style Gameplay**: Drop fruits that merge when matching types collide

@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
 
 // Import routes
 import gameRoutes from './routes/game';
@@ -13,6 +15,7 @@ import skinRoutes from './routes/skin';
 import rewardRoutes from './routes/reward';
 
 // Initialize Prisma
+// Connection URL is configured in prisma.config.ts
 export const prisma = new PrismaClient();
 
 const app = express();

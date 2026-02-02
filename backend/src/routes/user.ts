@@ -17,7 +17,7 @@ router.get('/nonce/:walletAddress', async (req: Request, res: Response) => {
     }
 
     const nonce = generateNonce();
-    const message = createSignMessage(walletAddress, nonce);
+    const message = createSignMessage(walletAddress as string, nonce);
 
     // Store nonce with expiration (5 minutes)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -132,7 +132,7 @@ router.get('/profile/:walletAddress', async (req: Request, res: Response) => {
     const { walletAddress } = req.params;
 
     const user = await prisma.user.findUnique({
-      where: { walletAddress },
+      where: { walletAddress: walletAddress as string },
       include: {
         skinLoadout: true,
         ownedSkins: {
@@ -172,9 +172,9 @@ router.get('/profile/:walletAddress', async (req: Request, res: Response) => {
           allTimeRank,
           createdAt: user.createdAt,
         },
-        skinLoadout: user.skinLoadout,
-        ownedSkins: user.ownedSkins,
-        pendingRewards: user.rewards,
+        skinLoadout: (user as any).skinLoadout,
+        ownedSkins: (user as any).ownedSkins,
+        pendingRewards: (user as any).rewards,
       }
     });
   } catch (error) {
@@ -194,7 +194,7 @@ router.get('/history/:walletAddress', async (req: Request, res: Response) => {
     const offset = parseInt(req.query.offset as string) || 0;
 
     const games = await prisma.gameSession.findMany({
-      where: { walletAddress },
+      where: { walletAddress: walletAddress as string },
       orderBy: { startTime: 'desc' },
       take: limit,
       skip: offset,
@@ -208,7 +208,7 @@ router.get('/history/:walletAddress', async (req: Request, res: Response) => {
     });
 
     const totalGames = await prisma.gameSession.count({
-      where: { walletAddress }
+      where: { walletAddress: walletAddress as string }
     });
 
     return res.json({

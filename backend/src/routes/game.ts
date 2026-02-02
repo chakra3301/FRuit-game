@@ -163,7 +163,8 @@ router.get('/state/:sessionId', async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
 
-    const gameEngine = activeSessions.get(sessionId);
+    const sid = sessionId as string;
+    const gameEngine = activeSessions.get(sid);
     if (!gameEngine) {
       return res.status(404).json({ error: 'Game session not found or expired' });
     }
@@ -219,7 +220,7 @@ async function endGameSession(sessionId: string, reason: 'timeout' | 'gameover' 
   const finalState = gameEngine.getState();
   const finalScore = finalState.score;
   const inputs = gameEngine.getInputHistory();
-  const replayData = compressReplay(inputs);
+  const replayData = new Uint8Array(compressReplay(inputs));
   const inputsHash = hashInputs(inputs);
 
   // Remove from active sessions
@@ -243,7 +244,7 @@ async function endGameSession(sessionId: string, reason: 'timeout' | 'gameover' 
     data: {
       totalPoints: { increment: finalScore },
       gamesPlayed: { increment: 1 },
-      highScore: Math.max(session.user.highScore, finalScore),
+      highScore: Math.max((session as any).user.highScore, finalScore),
     }
   });
 
@@ -304,7 +305,7 @@ async function endGameSession(sessionId: string, reason: 'timeout' | 'gameover' 
     data: {
       finalScore,
       totalPoints: user.totalPoints,
-      isNewHighScore: finalScore > session.user.highScore,
+      isNewHighScore: finalScore > (session as any).user.highScore,
       reason,
     }
   };

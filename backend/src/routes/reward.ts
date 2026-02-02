@@ -14,7 +14,7 @@ router.get('/pending/:walletAddress', async (req: Request, res: Response) => {
 
     const rewards = await prisma.reward.findMany({
       where: {
-        walletAddress,
+        walletAddress: walletAddress as string,
         claimedAt: null,
         OR: [
           { expiresAt: null },
@@ -45,7 +45,7 @@ router.get('/history/:walletAddress', async (req: Request, res: Response) => {
 
     const rewards = await prisma.reward.findMany({
       where: {
-        walletAddress,
+        walletAddress: walletAddress as string,
         claimedAt: { not: null }
       },
       orderBy: { claimedAt: 'desc' },
@@ -115,7 +115,7 @@ router.post('/claim', async (req: Request, res: Response) => {
     }
 
     if (!claimResult.success) {
-      return res.status(500).json({ error: claimResult.error });
+      return res.status(500).json({ error: (claimResult as any).error });
     }
 
     // Mark reward as claimed

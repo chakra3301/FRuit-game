@@ -42,21 +42,21 @@ router.get('/packs', async (req: Request, res: Response) => {
     });
 
     // Calculate remaining skins for each pack
-    const packsWithStats = packs.map(pack => ({
+    const packsWithStats = packs.map((pack: any) => ({
       id: pack.id,
       name: pack.name,
       description: pack.description,
       imageUrl: pack.imageUrl,
       price: pack.price,
       isSoldOut: pack.isSoldOut,
-      totalSkins: pack.skins.reduce((sum, skin) => sum + skin.totalSupply, 0),
-      remainingSkins: pack.skins.reduce((sum, skin) => sum + (skin.totalSupply - skin.mintedCount), 0),
+      totalSkins: pack.skins.reduce((sum: number, skin: any) => sum + skin.totalSupply, 0),
+      remainingSkins: pack.skins.reduce((sum: number, skin: any) => sum + (skin.totalSupply - skin.mintedCount), 0),
       skinsByRarity: {
-        common: pack.skins.filter(s => s.rarity === 'common').length,
-        uncommon: pack.skins.filter(s => s.rarity === 'uncommon').length,
-        rare: pack.skins.filter(s => s.rarity === 'rare').length,
-        epic: pack.skins.filter(s => s.rarity === 'epic').length,
-        legendary: pack.skins.filter(s => s.rarity === 'legendary').length,
+        common: pack.skins.filter((s: any) => s.rarity === 'common').length,
+        uncommon: pack.skins.filter((s: any) => s.rarity === 'uncommon').length,
+        rare: pack.skins.filter((s: any) => s.rarity === 'rare').length,
+        epic: pack.skins.filter((s: any) => s.rarity === 'epic').length,
+        legendary: pack.skins.filter((s: any) => s.rarity === 'legendary').length,
       },
       skins: pack.skins,
     }));
@@ -80,7 +80,7 @@ router.get('/pack/:packId', async (req: Request, res: Response) => {
     const { packId } = req.params;
 
     const pack = await prisma.pack.findUnique({
-      where: { id: packId },
+      where: { id: packId as string },
       include: {
         skins: {
           select: {
@@ -105,8 +105,8 @@ router.get('/pack/:packId', async (req: Request, res: Response) => {
       success: true,
       data: {
         ...pack,
-        totalSkins: pack.skins.reduce((sum, skin) => sum + skin.totalSupply, 0),
-        remainingSkins: pack.skins.reduce((sum, skin) => sum + (skin.totalSupply - skin.mintedCount), 0),
+        totalSkins: (pack as any).skins.reduce((sum: number, skin: any) => sum + skin.totalSupply, 0),
+        remainingSkins: (pack as any).skins.reduce((sum: number, skin: any) => sum + (skin.totalSupply - skin.mintedCount), 0),
       },
     });
   } catch (error) {

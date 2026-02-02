@@ -16,13 +16,15 @@
   "license": "ISC",
   "description": "Fruit Game Backend Server",
   "dependencies": {
-    "@prisma/client": "^7.3.0",
+    "@prisma/adapter-pg": "^7.3.0",
+    "@prisma/client": "^6.19.2",
     "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
-    "uuid": "^13.0.0",
-    "zlib": "^1.0.5"
+    "pg": "^8.17.2",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -30,7 +32,7 @@
     "@types/node": "^25.0.10",
     "@types/uuid": "^10.0.0",
     "nodemon": "^3.1.11",
-    "prisma": "^7.3.0",
+    "prisma": "^6.19.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }

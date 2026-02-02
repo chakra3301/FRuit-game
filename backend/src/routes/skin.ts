@@ -20,7 +20,7 @@ router.get('/owned/:walletAddress', async (req: Request, res: Response) => {
     const { walletAddress } = req.params;
 
     const ownedSkins = await prisma.ownedSkin.findMany({
-      where: { walletAddress },
+      where: { walletAddress: walletAddress as string },
       include: {
         skin: {
           include: { pack: true }
@@ -36,7 +36,7 @@ router.get('/owned/:walletAddress', async (req: Request, res: Response) => {
     }
 
     for (const owned of ownedSkins) {
-      const fruitType = owned.skin.fruitType;
+      const fruitType = (owned as any).skin.fruitType;
       if (skinsByFruit[fruitType]) {
         skinsByFruit[fruitType].push(owned);
       }
@@ -65,7 +65,7 @@ router.get('/loadout/:walletAddress', async (req: Request, res: Response) => {
     const { walletAddress } = req.params;
 
     const loadout = await prisma.skinLoadout.findUnique({
-      where: { walletAddress }
+      where: { walletAddress: walletAddress as string }
     });
 
     // If no loadout exists, return empty loadout
